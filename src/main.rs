@@ -1,31 +1,158 @@
-#![feature(iter_intersperse)]
-use std::io::{BufRead, stdin};
+use std::{hint::unreachable_unchecked, io::{BufRead, Read, stdin}, ops::{Index, IndexMut}};
+
+#[derive(Copy, Clone)]
+struct SVecC {
+    inner: [u8; 80],
+    len: usize
+}
+
+impl SVecC {
+    pub fn new() -> Self {
+        Self {
+            inner: [0; 80],
+            len: 0
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item=&u8> {
+        self.inner[0..self.len].iter()
+    }
+
+    #[inline]
+    pub fn chars<'a>(&'a self) -> SVecCIter<'a> {
+        SVecCIter {
+            inner: &self.inner[0..self.len],
+            index: 0
+        }
+    }
+
+    #[inline]
+    pub fn push(&mut self, c: u8) {
+        self.inner[self.len] = c;
+        self.len += 1;
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.len = 0;
+    }
+}
+
+impl Index<usize> for SVecC {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.inner[index]
+    }
+}
+
+impl IndexMut<usize> for SVecC {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.inner[index]
+    }
+}
+
+struct SVecCIter<'a> {
+    inner: &'a [u8],
+    index: usize
+}
+
+impl<'a> Iterator for SVecCIter<'a> {
+    type Item = char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.inner.len() {
+            None
+        } else {
+            let ret = match self.inner[self.index] {
+                0xa5 => 'å',
+                0xa4 => 'ä',
+                0xb6 => 'ö',
+                o => o as char
+            };
+            self.index += 1;
+            Some(ret)
+        }
+    }
+}
 
 fn main() {
-    let mut word_list: Vec<Vec<char>> = Vec::with_capacity(5_000_000);
-    let mut misspelled: Vec<Vec<char>> = Vec::with_capacity(100);
+    #[cfg(feature = "bench")]
+    let start = std::time::Instant::now();
 
-    let stdin = std::io::stdin();
-    let mut lines = stdin.lock().lines();
+
+    let mut word_list: Vec<SVecC> = Vec::with_capacity(500_000);
+    let mut misspelled: Vec<SVecC> = Vec::with_capacity(100);
+
+    let mut stdin = std::io::stdin();
+    #[cfg(not(feature = "testing"))]
+    let mut input = Vec::with_capacity(201_000_000);
+    #[cfg(not(feature = "testing"))]
+    stdin.read_to_end(&mut input);
+    //let mut lines = input.lines();
+    #[cfg(not(feature = "testing"))]
+    let mut bytes = input.into_iter(); //input.bytes();
 
     // FOR DEBUGGING PURPOSES
     #[cfg(feature = "testing")]
     let input_file = std::env::args().skip(1).next().expect("path to test file expected");
     #[cfg(feature = "testing")]
-    let input = std::fs::read_to_string(input_file).unwrap();
+    let input = std::fs::read(input_file).unwrap();
     #[cfg(feature = "testing")]
-    let mut lines = input.lines().map(|l| Result::<_, ()>::Ok(l.to_string()));
+    let mut bytes = input.into_iter();
 
-    for line in &mut lines {
-        let line = line.unwrap();
-        if line.bytes().next().unwrap() == b'#' {
+    let mut buffer = SVecC::new();
+    loop {
+        if let Some(c) = bytes.next() {
+            match c {
+                b'#' => break,
+                b'\n' => {
+                    word_list.push(buffer);
+                    buffer.clear();
+                },
+                #[cfg(windows)]
+                b'\r' => {},
+                0xc3 => buffer.push(match bytes.next() { Some(v) => v, None => unsafe { unreachable_unchecked() } }),
+                o => buffer.push(o)
+            }
+        } else {
+            break
+        }
+    }
+    #[cfg(windows)]
+    bytes.next();
+    bytes.next();
+
+    loop {
+        if let Some(c) = bytes.next() {
+            match c {
+                b'\n' => {
+                    misspelled.push(buffer);
+                    buffer.clear();
+                },
+                #[cfg(windows)]
+                b'\r' => {},
+                0xc3 => buffer.push(match bytes.next() { Some(v) => v, None => unsafe { unreachable_unchecked() } }),
+                o => buffer.push(o)
+            }
+        } else {
             break;
         }
-
-        word_list.push(line.chars().collect());
     }
 
-    misspelled.extend(lines.map(|l| l.unwrap().chars().collect()));
+    #[cfg(feature = "bench")]
+    {
+        let end = std::time::Instant::now();
+        eprintln!("Time: {:?}", end - start);
+    }
+    #[cfg(feature = "bench")]
+    let start = std::time::Instant::now();
 
 
     let mut matrix = [[0; 41]; 41];
@@ -34,13 +161,14 @@ fn main() {
         matrix[0][i] = i as u8;
     }
 
-    let mut last = &vec![];
     
     for word1 in &misspelled {
         let l1 = word1.len();
         
-        let mut min_dist = u8::MAX;
+        let mut min_dist = std::u8::MAX;
         let mut res = vec![];
+
+        let mut last = &SVecC::new();
 
         for word2 in &word_list {
             let l2 = word2.len();
@@ -54,12 +182,15 @@ fn main() {
                 start += 1;
             }
 
-            #[cfg(feature = "testing")]
-            eprintln!("   {}", word2.iter().map(|c| vec![' ', ' ', *c]).flatten().collect::<String>());
 
             for p1 in 1..=word1.len() {
                 #[cfg(feature = "testing")]
-                eprint!("  {}", word1[p1 - 1]);
+                eprint!("  {}", match word1[p1 - 1] { 0xa5 => 'å', 0xa4 => 'ä', 0xb6 => 'ö', o => o as char });
+                #[cfg(feature = "testing")]
+                for i in 1..start {
+                    eprint!("{:3}", matrix[p1][i]);
+                }
+
                 for p2 in start..=word2.len() {
                     let a = matrix[p1 - 1][p2] + 1;
                     let b = matrix[p1][p2 - 1] + 1;
@@ -69,8 +200,8 @@ fn main() {
                     #[cfg(feature = "testing")]
                     eprint!("{:3}", d);
                 }
-            #[cfg(feature = "testing")]
-            eprintln!();
+                #[cfg(feature = "testing")]
+                eprintln!();
             }
 
             let d = matrix[l1 as usize][l2 as usize];
@@ -82,7 +213,20 @@ fn main() {
                 res.push(word2);
             }
             last = word2;
+            #[cfg(feature = "testing")]
+            eprintln!();
         }
-        println!("{} ({}) {}", word1.iter().collect::<String>(), min_dist, res.iter().map(|cc| cc.iter().collect::<String>()).intersperse(" ".into()).collect::<String>())
+        print!("{} ({})", word1.chars().collect::<String>(), min_dist);
+        for word in res {
+            print!(" {}", word.chars().collect::<String>());
+        }
+        println!();
+    }
+
+    #[cfg(feature = "bench")]
+    {
+        let end = std::time::Instant::now();
+        eprintln!("Time: {:?}", end - start);
     }
 }
+
