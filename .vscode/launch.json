@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'evper-task-17'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=evper-task-17",
+                    "--package=evper-task-17"
+                ],
+                "filter": {
+                    "name": "evper-task-17",
+                    "kind": "bin"
+                }
+            },
+            "args": ["testfall/testmedordlista.indata"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'evper-task-17'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=evper-task-17",
+                    "--package=evper-task-17"
+                ],
+                "filter": {
+                    "name": "evper-task-17",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
