@@ -1,4 +1,4 @@
-use std::{hint::unreachable_unchecked, io::{BufRead, Read, stdin}, ops::{Index, IndexMut}};
+use std::{hint::unreachable_unchecked, io::{Read}, ops::{Index, IndexMut}};
 
 #[derive(Copy, Clone)]
 struct SVecC {
@@ -17,11 +17,6 @@ impl SVecC {
     #[inline]
     pub fn len(&self) -> usize {
         self.len
-    }
-
-    #[inline]
-    pub fn iter(&self) -> impl Iterator<Item=&u8> {
-        self.inner[0..self.len].iter()
     }
 
     #[inline]
@@ -94,8 +89,7 @@ fn main() {
     #[cfg(not(feature = "testing"))]
     let mut input = Vec::with_capacity(201_000_000);
     #[cfg(not(feature = "testing"))]
-    stdin.read_to_end(&mut input);
-    //let mut lines = input.lines();
+    match stdin.read_to_end(&mut input) { Ok(_) => {}, Err(_) => unsafe { unreachable_unchecked() } };
     #[cfg(not(feature = "testing"))]
     let mut bytes = input.into_iter(); //input.bytes();
 
@@ -161,6 +155,8 @@ fn main() {
         matrix[0][i] = i as u8;
     }
 
+    let mut results = vec![];
+
     
     for word1 in &misspelled {
         let l1 = word1.len();
@@ -216,17 +212,21 @@ fn main() {
             #[cfg(feature = "testing")]
             eprintln!();
         }
-        print!("{} ({})", word1.chars().collect::<String>(), min_dist);
-        for word in res {
-            print!(" {}", word.chars().collect::<String>());
-        }
-        println!();
-    }
 
+        results.push((word1, min_dist, res));
+    }
+    
     #[cfg(feature = "bench")]
     {
         let end = std::time::Instant::now();
         eprintln!("Time: {:?}", end - start);
     }
-}
 
+    for (a, b, c) in results {
+        print!("{} ({})", a.chars().collect::<String>(), b);
+        for word in c {
+            print!(" {}", word.chars().collect::<String>());
+        }
+        println!();
+    }
+}
