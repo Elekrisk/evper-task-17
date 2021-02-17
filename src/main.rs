@@ -158,8 +158,6 @@ fn main() {
         matrix[i][0] = i as u8;
         matrix[0][i] = i as u8;
     }
-
-    let mut results = vec![];
     
     
     for word1 in &misspelled {
@@ -246,23 +244,15 @@ fn main() {
             eprintln!();
         }
 
-        results.push((word1, min_dist, res));
-    }
-    
-    #[cfg(feature = "bench")]
-    let algo_end = std::time::Instant::now();
-
-    #[cfg(feature = "bench")]
-    let out_start = std::time::Instant::now();
-    for (a, b, c) in results {
-        print!("{} ({})", a.chars().collect::<String>(), b);
-        for word in c {
+        print!("{} ({})", word1.chars().collect::<String>(), min_dist);
+        for word in res {
             print!(" {}", word.chars().collect::<String>());
         }
         println!();
     }
+    
     #[cfg(feature = "bench")]
-    let out_end = std::time::Instant::now();
+    let algo_end = std::time::Instant::now();
 
     #[cfg(feature = "bench")]
     let total_end = std::time::Instant::now();
@@ -274,7 +264,6 @@ fn main() {
         eprintln!("In:      {:>10} ({:.9} s)", format!("{:?}", in_end - in_start), (in_end - in_start).as_secs_f32());
         eprintln!("Convert: {:>10} ({:.9} s)", format!("{:?}", convert_end - convert_start), (convert_end - convert_start).as_secs_f32());
         eprintln!("Algo:    {:>10} ({:.9} s)", format!("{:?}", algo_end - algo_start), (algo_end - algo_start).as_secs_f32());
-        eprintln!("Out:     {:>10} ({:.9} s)", format!("{:?}", out_end - out_start), (out_end - out_start).as_secs_f32());
         eprintln!("Total:   {:>10} ({:.9} s)", format!("{:?}", total_end - tot_start), (total_end - tot_start).as_secs_f32());
     }
     #[cfg(feature = "bench")]
@@ -284,7 +273,6 @@ fn main() {
         eprintln!("In:      {:>10}", format!("{:?}", in_end - in_start));
         eprintln!("Convert: {:>10}", format!("{:?}", convert_end - convert_start));
         eprintln!("Algo:    {:>10}", format!("{:?}", algo_end - algo_start));
-        eprintln!("Out:     {:>10}", format!("{:?}", out_end - out_start));
         eprintln!("Total:   {:>10}", format!("{:?}", total_end - tot_start));
     }
 }
