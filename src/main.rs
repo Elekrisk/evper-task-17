@@ -1,15 +1,16 @@
 use std::{hint::unreachable_unchecked, io::{Read}, ops::{Index, IndexMut}};
+#[cfg(unix)]
 
 #[derive(Copy, Clone)]
 struct SVecC {
-    inner: [u8; 80],
+    inner: [u8; 40],
     len: usize
 }
 
 impl SVecC {
     pub fn new() -> Self {
         Self {
-            inner: [0; 80],
+            inner: [0; 40],
             len: 0
         }
     }
@@ -78,21 +79,27 @@ impl<'a> Iterator for SVecCIter<'a> {
 }
 
 fn main() {
+    let tot_start = std::time::Instant::now();
+    
     #[cfg(feature = "bench")]
-    let start = std::time::Instant::now();
-
-
+    let alloc_start = std::time::Instant::now();
     let mut word_list: Vec<SVecC> = Vec::with_capacity(500_000);
     let mut misspelled: Vec<SVecC> = Vec::with_capacity(100);
-
+    #[cfg(feature = "bench")]
+    let alloc_end = std::time::Instant::now();
+    
     let mut stdin = std::io::stdin();
     #[cfg(not(feature = "testing"))]
     let mut input = Vec::with_capacity(201_000_000);
+    #[cfg(feature = "bench")]
+    let in_start = std::time::Instant::now();
     #[cfg(not(feature = "testing"))]
     match stdin.read_to_end(&mut input) { Ok(_) => {}, Err(_) => unsafe { unreachable_unchecked() } };
+    #[cfg(feature = "bench")]
+    let in_end = std::time::Instant::now();
     #[cfg(not(feature = "testing"))]
     let mut bytes = input.into_iter(); //input.bytes();
-
+    
     // FOR DEBUGGING PURPOSES
     #[cfg(feature = "testing")]
     let input_file = std::env::args().skip(1).next().expect("path to test file expected");
@@ -100,6 +107,9 @@ fn main() {
     let input = std::fs::read(input_file).unwrap();
     #[cfg(feature = "testing")]
     let mut bytes = input.into_iter();
+    
+    #[cfg(feature = "bench")]
+    let convert_start = std::time::Instant::now();
 
     let mut buffer = SVecC::new();
     loop {
@@ -110,7 +120,6 @@ fn main() {
                     word_list.push(buffer);
                     buffer.clear();
                 },
-                #[cfg(windows)]
                 b'\r' => {},
                 0xc3 => buffer.push(match bytes.next() { Some(v) => v, None => unsafe { unreachable_unchecked() } }),
                 o => buffer.push(o)
@@ -119,10 +128,10 @@ fn main() {
             break
         }
     }
-    #[cfg(windows)]
-    bytes.next();
-    bytes.next();
-
+    if bytes.next().unwrap() == b'\r' {
+        bytes.next();
+    }
+    
     loop {
         if let Some(c) = bytes.next() {
             match c {
@@ -130,7 +139,6 @@ fn main() {
                     misspelled.push(buffer);
                     buffer.clear();
                 },
-                #[cfg(windows)]
                 b'\r' => {},
                 0xc3 => buffer.push(match bytes.next() { Some(v) => v, None => unsafe { unreachable_unchecked() } }),
                 o => buffer.push(o)
@@ -139,16 +147,12 @@ fn main() {
             break;
         }
     }
-
     #[cfg(feature = "bench")]
-    {
-        let end = std::time::Instant::now();
-        eprintln!("Time: {:?}", end - start);
-    }
+    let convert_end = std::time::Instant::now();
     #[cfg(feature = "bench")]
-    let start = std::time::Instant::now();
+    let algo_start = std::time::Instant::now();
 
-
+    
     let mut matrix = [[0; 41]; 41];
     for i in 1..41 {
         matrix[i][0] = i as u8;
@@ -156,20 +160,20 @@ fn main() {
     }
 
     let mut results = vec![];
-
+    
     
     for word1 in &misspelled {
         let l1 = word1.len();
         
         let mut min_dist = std::u8::MAX;
         let mut res = vec![];
-
+        
         let mut last = &SVecC::new();
-
+        
         for word2 in &word_list {
             let l2 = word2.len();
             if if l1 > l2 { l1 - l2 } else { l2 - l1 } > min_dist as usize { continue; } 
-
+            
             let mut start = 1;
             for i in 0..last.len().min(l2) {
                 if last[i] != word2[i] {
@@ -217,16 +221,30 @@ fn main() {
     }
     
     #[cfg(feature = "bench")]
-    {
-        let end = std::time::Instant::now();
-        eprintln!("Time: {:?}", end - start);
-    }
+    let algo_end = std::time::Instant::now();
 
+    #[cfg(feature = "bench")]
+    let out_start = std::time::Instant::now();
     for (a, b, c) in results {
         print!("{} ({})", a.chars().collect::<String>(), b);
         for word in c {
             print!(" {}", word.chars().collect::<String>());
         }
         println!();
+    }
+    #[cfg(feature = "bench")]
+    let out_end = std::time::Instant::now();
+
+    #[cfg(feature = "bench")]
+    let total_end = std::time::Instant::now();
+
+    #[cfg(feature = "bench")]
+    {
+        eprintln!("Alloc: {:?}", alloc_end - alloc_start);
+        eprintln!("In: {:?}", in_end - in_start);
+        eprintln!("Convert: {:?}", convert_end - convert_start);
+        eprintln!("Algo: {:?}", algo_end - algo_start);
+        eprintln!("Out: {:?}", out_end - out_start);
+        eprintln!("Total: {:?}", total_end - tot_start);
     }
 }
