@@ -1,4 +1,4 @@
-use std::{hint::unreachable_unchecked, io::{Read}, ops::{Index, IndexMut}};
+use std::{hint::unreachable_unchecked, io::{Read, stdin}, ops::{Index, IndexMut}};
 
 #[derive(Copy, Clone)]
 struct SVecC {
@@ -78,6 +78,7 @@ impl<'a> Iterator for SVecCIter<'a> {
 }
 
 fn main() {
+    #[cfg(feature = "bench")]
     let tot_start = std::time::Instant::now();
     
     #[cfg(feature = "bench")]
@@ -173,7 +174,7 @@ fn main() {
             let l2 = word2.len();
             if if l1 > l2 { l1 - l2 } else { l2 - l1 } > min_dist as usize { continue; } 
             
-            let mut start = 1;
+            let mut start = 0;
             for i in 0..last.len().min(l2) {
                 if last[i] != word2[i] {
                     break;
@@ -181,29 +182,74 @@ fn main() {
                 start += 1;
             }
 
-
-            for p1 in 1..=word1.len() {
-                #[cfg(feature = "testing")]
-                eprint!("  {}", match word1[p1 - 1] { 0xa5 => 'å', 0xa4 => 'ä', 0xb6 => 'ö', o => o as char });
-                #[cfg(feature = "testing")]
-                for i in 1..start {
-                    eprint!("{:3}", matrix[p1][i]);
+            let mut s = 0;
+            for i in 0..l1.min(l2) {
+                if word1[i] == word2[i] {
+                    s += 1;
+                } else {
+                    break;
                 }
-
-                for p2 in start..=word2.len() {
-                    let a = matrix[p1 - 1][p2] + 1;
-                    let b = matrix[p1][p2 - 1] + 1;
-                    let c = matrix[p1 - 1][p2 - 1] + if word1[p1 - 1] == word2[p2 - 1] { 0 } else { 1 };
-                    let d = a.min(b).min(c);
-                    matrix[p1][p2] = d;
-                    #[cfg(feature = "testing")]
-                    eprint!("{:3}", d);
-                }
-                #[cfg(feature = "testing")]
-                eprintln!();
             }
 
-            let d = matrix[l1 as usize][l2 as usize];
+            start = start.max(s).max(1);
+
+            for i in 1..=s {
+                matrix[i][i] = 0;
+            }
+
+            for p1 in s.max(1)..=word1.len() {
+
+                for p2 in start..=word2.len() {
+                    #[cfg(feature = "testing")]
+                    {
+                        eprintln!("s: {}, p1: {}, p2: {}", s, p1, p2);
+                        eprint!("      ");
+                        for c in word2.chars() {
+                            eprint!("{:>3}", c);
+                        }
+                        eprintln!();
+                        for (p11, c) in std::iter::once((0, ' ')).chain(word1.chars().enumerate().map(|(i, c)| (i + 1, c))) {
+                            eprint!("{:>3}", c);
+                            for p22 in 0..l2 + 1 {
+                                if p11 == p1 && p22 == p2 {
+                                    eprint!("{:>3}", format!("!{}", matrix[p11][p22]));
+                                } else {
+                                    eprint!("{:3}", matrix[p11][p22]);
+                                }
+                            }
+                            eprintln!();
+                        }
+                        eprintln!();
+                        let mut buffer = String::new();
+                        stdin.read_line(&mut buffer).unwrap();
+                    }
+                    let a = if p1 > s  || s == 0 { matrix[p1 - 1][p2] + 1 } else { std::u8::MAX };
+                    let b = if p2 > s  || s == 0 { matrix[p1][p2 - 1] + 1 } else { std::u8::MAX };
+                    let c = if p1 > s  && p2 > s || s == 0 || p1 == p2 { matrix[p1 - 1][p2 - 1] + if word1[p1 - 1] == word2[p2 - 1] { 0 } else { 1 } } else { std::u8::MAX };
+                    let d = a.min(b).min(c);
+                    matrix[p1][p2] = d;
+                }
+            }
+            #[cfg(feature = "testing")]
+            {
+                eprint!("      ");
+                for c in word2.chars() {
+                    eprint!("{:>3}", c);
+                }
+                eprintln!();
+                for (p1, c) in std::iter::once((0, ' ')).chain(word1.chars().enumerate().map(|(i, c)| (i + 1, c))) {
+                    eprint!("{:>3}", c);
+                    for p2 in 0..l2 + 1 {
+                        eprint!("{:3}", matrix[p1][p2]);
+                    }
+                    eprintln!();
+                }
+                eprintln!();
+                let mut buffer = String::new();
+                stdin.read_line(&mut buffer).unwrap();
+            }
+
+            let d = matrix[l1][l2];
             if d < min_dist {
                 min_dist = d;
                 res.clear();

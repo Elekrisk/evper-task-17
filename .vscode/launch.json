@@ -12,7 +12,8 @@
                 "args": [
                     "build",
                     "--bin=evper-task-17",
-                    "--package=evper-task-17"
+                    "--package=evper-task-17",
+                    "--features=testing"
                 ],
                 "filter": {
                     "name": "evper-task-17",
