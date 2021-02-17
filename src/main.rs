@@ -238,12 +238,23 @@ fn main() {
     let total_end = std::time::Instant::now();
 
     #[cfg(feature = "bench")]
+    #[cfg(feature = "sec")]
     {
-        eprintln!("Alloc: {:?}", alloc_end - alloc_start);
-        eprintln!("In: {:?}", in_end - in_start);
-        eprintln!("Convert: {:?}", convert_end - convert_start);
-        eprintln!("Algo: {:?}", algo_end - algo_start);
-        eprintln!("Out: {:?}", out_end - out_start);
-        eprintln!("Total: {:?}", total_end - tot_start);
+        eprintln!("Alloc:   {:>10} ({:.9} s)", format!("{:?}", alloc_end - alloc_start), (alloc_end - alloc_start).as_secs_f32());
+        eprintln!("In:      {:>10} ({:.9} s)", format!("{:?}", in_end - in_start), (in_end - in_start).as_secs_f32());
+        eprintln!("Convert: {:>10} ({:.9} s)", format!("{:?}", convert_end - convert_start), (convert_end - convert_start).as_secs_f32());
+        eprintln!("Algo:    {:>10} ({:.9} s)", format!("{:?}", algo_end - algo_start), (algo_end - algo_start).as_secs_f32());
+        eprintln!("Out:     {:>10} ({:.9} s)", format!("{:?}", out_end - out_start), (out_end - out_start).as_secs_f32());
+        eprintln!("Total:   {:>10} ({:.9} s)", format!("{:?}", total_end - tot_start), (total_end - tot_start).as_secs_f32());
+    }
+    #[cfg(feature = "bench")]
+    #[cfg(not(feature = "sec"))]
+    {
+        eprintln!("Alloc:   {:>10}", format!("{:?}", alloc_end - alloc_start));
+        eprintln!("In:      {:>10}", format!("{:?}", in_end - in_start));
+        eprintln!("Convert: {:>10}", format!("{:?}", convert_end - convert_start));
+        eprintln!("Algo:    {:>10}", format!("{:?}", algo_end - algo_start));
+        eprintln!("Out:     {:>10}", format!("{:?}", out_end - out_start));
+        eprintln!("Total:   {:>10}", format!("{:?}", total_end - tot_start));
     }
 }

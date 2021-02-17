@@ -10,5 +10,6 @@ edition = "2018"
 default = []
 testing = []
 bench = []
+sec = []
 
 [dependencies]
