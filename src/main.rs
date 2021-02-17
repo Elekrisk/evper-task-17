@@ -1,5 +1,4 @@
 use std::{hint::unreachable_unchecked, io::{Read}, ops::{Index, IndexMut}};
-#[cfg(unix)]
 
 #[derive(Copy, Clone)]
 struct SVecC {
