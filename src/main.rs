@@ -174,7 +174,7 @@ fn main() {
             let l2 = word2.len();
             if if l1 > l2 { l1 - l2 } else { l2 - l1 } > min_dist as usize { continue; } 
             
-            let mut start = 0;
+            let mut start = 1;
             for i in 0..last.len().min(l2) {
                 if last[i] != word2[i] {
                     break;
@@ -182,27 +182,11 @@ fn main() {
                 start += 1;
             }
 
-            let mut s = 0;
-            for i in 0..l1.min(l2) {
-                if word1[i] == word2[i] {
-                    s += 1;
-                } else {
-                    break;
-                }
-            }
-
-            start = start.max(s).max(1);
-
-            for i in 1..=s {
-                matrix[i][i] = 0;
-            }
-
-            for p1 in s.max(1)..=word1.len() {
+            for p1 in 1..=word1.len() {
 
                 for p2 in start..=word2.len() {
                     #[cfg(feature = "testing")]
                     {
-                        eprintln!("s: {}, p1: {}, p2: {}", s, p1, p2);
                         eprint!("      ");
                         for c in word2.chars() {
                             eprint!("{:>3}", c);
@@ -223,9 +207,9 @@ fn main() {
                         let mut buffer = String::new();
                         stdin.read_line(&mut buffer).unwrap();
                     }
-                    let a = if p1 > s  || s == 0 { matrix[p1 - 1][p2] + 1 } else { std::u8::MAX };
-                    let b = if p2 > s  || s == 0 { matrix[p1][p2 - 1] + 1 } else { std::u8::MAX };
-                    let c = if p1 > s  && p2 > s || s == 0 || p1 == p2 { matrix[p1 - 1][p2 - 1] + if word1[p1 - 1] == word2[p2 - 1] { 0 } else { 1 } } else { std::u8::MAX };
+                    let a = matrix[p1 - 1][p2] + 1;
+                    let b = matrix[p1][p2 - 1] + 1;
+                    let c = matrix[p1 - 1][p2 - 1] + if word1[p1 - 1] == word2[p2 - 1] { 0 } else { 1 };
                     let d = a.min(b).min(c);
                     matrix[p1][p2] = d;
                 }
